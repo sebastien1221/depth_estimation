@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import matplotlib.pyplot as plt
 import torchvision.models as models
 from tqdm import tqdm
@@ -49,10 +49,24 @@ class DepthDataset(Dataset):
 def main():
     dataset = DepthDataset("data/nyu_depth_preprocessed.pt")
 
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
     train_loader = DataLoader(
-        dataset,
+        train_dataset,
         batch_size=32,
         shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+        persistent_workers=True
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=32,
+        shuffle=False,
         num_workers=4,
         pin_memory=True,
         persistent_workers=True
@@ -180,7 +194,7 @@ def main():
 
     with torch.no_grad():
 
-        for batch in train_loader:
+        for batch in test_loader:
 
             images = batch["image"].to(device)
             depths = batch["depth"].to(device)
@@ -211,7 +225,7 @@ def main():
     ## Visualization
     model.eval()
 
-    batch = next(iter(train_loader))
+    batch = next(iter(test_loader))
 
     images = batch["image"].to(device)
     depths = batch["depth"].to(device)
